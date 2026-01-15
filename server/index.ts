@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -105,7 +105,8 @@ app.get('/health', (_req: Request, res: Response) => {
 app.get(['/', '/*'], async (req: Request, res: Response) => {
   try {
     const ssrModulePath = resolve(__dirname, '../server/entry-server.js');
-    const { render } = await import(ssrModulePath) as SSRModule;
+    const ssrModuleUrl = pathToFileURL(ssrModulePath).href;
+    const { render } = await import(ssrModuleUrl) as SSRModule;
 
     // Use originalUrl to preserve query params for routing
     const { html } = render(req.originalUrl);
