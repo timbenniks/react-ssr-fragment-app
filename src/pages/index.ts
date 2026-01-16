@@ -1,2 +1,1 @@
-export { CategoryPage } from "./CategoryPage";
-export { NotFound } from "./NotFound";
+export { Page } from "./Page";
