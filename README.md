@@ -103,6 +103,80 @@ React Router is included for future extensibility - you can add custom routes in
 └── package.json
 ```
 
+## Contentstack Setup
+
+Before you can run this code, you will need a Contentstack "Stack" to connect to. Follow the following steps to seed a Stack that this codebase understands.
+
+> If you installed this project via the Contentstack Marketplace or new account onboarding, you can skip this step.
+
+### Install the CLI
+
+```bash
+npm install -g @contentstack/cli
+```
+
+#### Using the CLI for the first time?
+
+It might ask you to set your default region. You can get all regions and their codes [here](https://www.contentstack.com/docs/developers/cli/configure-regions-in-the-cli) or run `csdx config:get:region`.
+
+> **Note:** Free Contentstack developer accounts are bound to the EU region. We still use the CDN, so the API is lightning fast.
+
+Set your region like so:
+
+```bash
+csdx config:set:region EU
+```
+
+### Log in via the CLI
+
+```bash
+csdx auth:login
+```
+
+### Get your organization UID
+
+In your Contentstack Organization dashboard, find `Org admin` and copy your Organization ID (Example: `blt481c598b0d8352d9`).
+
+### Create a new stack
+
+Make sure to replace `<YOUR_ORG_ID>` with your actual Organization ID and run the below.
+
+```bash
+csdx cm:stacks:seed --repo "contentstack/kickstart-stack-seed" --org "<YOUR_ORG_ID>" -n "Kickstart Stack"
+```
+
+### Create a delivery token
+
+Go to `Settings > Tokens` and create a delivery token. Select the `preview` scope and turn on `Create preview token`.
+
+### Fill out your .env file
+
+Now that you have a delivery token, you can fill out the `.env` file in your codebase.
+
+> You can find the API key, Delivery Token and Preview Token in Settings > Tokens > Your token.
+
+```bash
+# Server Configuration
+PORT=3000
+ASSET_BASE_URL=https://fragments.example.com
+
+# Contentstack Configuration
+CONTENTSTACK_API_KEY=<YOUR_API_KEY>
+CONTENTSTACK_DELIVERY_TOKEN=<YOUR_DELIVERY_TOKEN>
+CONTENTSTACK_PREVIEW_TOKEN=<YOUR_PREVIEW_TOKEN>
+CONTENTSTACK_REGION=EU
+CONTENTSTACK_ENVIRONMENT=preview
+CONTENTSTACK_PREVIEW=true
+```
+
+### Turn on Live Preview
+
+Go to Settings > Live Preview. Click enable and select the `Preview` environment in the dropdown. Hit save.
+
+More details about Contentstack integration can be found on the [Contentstack docs](https://www.contentstack.com/docs/developers).
+
+[![Join us on Discord](https://img.shields.io/badge/Join%20Our%20Discord-7289da.svg?style=flat&logo=discord&logoColor=%23fff)](https://community.contentstack.com)
+
 ## Installation
 
 ```bash
@@ -117,11 +191,14 @@ Start the development server with hot module replacement:
 npm run dev
 ```
 
+> **No build step required!** The dev server uses Vite's development mode which handles TypeScript transpilation, SSR module loading, and asset bundling automatically. Just run `npm run dev` and start coding.
+
 This starts a dev server at `http://localhost:3000` with:
 
 - **Hot Module Replacement** for React components
 - **Instant SSR re-renders** on file save
 - **Live Contentstack data fetching** during development
+- **On-the-fly TypeScript compilation** - no build needed
 
 ### Development Workflow
 
@@ -172,10 +249,13 @@ Server starts on `http://localhost:3000` by default.
 
 The server uses [dotenv](https://www.npmjs.com/package/dotenv) to load environment variables from a `.env` file.
 
-1. Copy the example file:
+> **First-time setup?** See the [Contentstack Setup](#contentstack-setup) section above to create your stack and get your API credentials using the CLI.
+
+1. Create a `.env` file in the project root (or copy from `.env.example` if available):
 
 ```bash
-cp .env.example .env
+cp .env.example .env  # if .env.example exists
+# or create .env manually
 ```
 
 2. Edit `.env` with your settings:
@@ -186,15 +266,17 @@ PORT=3000
 ASSET_BASE_URL=https://fragments.example.com
 
 # Contentstack Configuration
-CONTENTSTACK_API_KEY=your_api_key
-CONTENTSTACK_DELIVERY_TOKEN=your_delivery_token
-CONTENTSTACK_ENVIRONMENT=production
-CONTENTSTACK_REGION=us
+CONTENTSTACK_API_KEY=<YOUR_API_KEY>
+CONTENTSTACK_DELIVERY_TOKEN=<YOUR_DELIVERY_TOKEN>
+CONTENTSTACK_ENVIRONMENT=preview
+CONTENTSTACK_REGION=EU
 
 # Contentstack Live Preview (optional)
-CONTENTSTACK_PREVIEW=false
-CONTENTSTACK_PREVIEW_TOKEN=your_preview_token
+CONTENTSTACK_PREVIEW=true
+CONTENTSTACK_PREVIEW_TOKEN=<YOUR_PREVIEW_TOKEN>
 ```
+
+> You can find the API key, Delivery Token and Preview Token in Contentstack: Settings > Tokens > Your token.
 
 ### Environment Variables
 
@@ -206,7 +288,7 @@ CONTENTSTACK_PREVIEW_TOKEN=your_preview_token
 | `CONTENTSTACK_DELIVERY_TOKEN` | Contentstack delivery token       | (required)       |
 | `CONTENTSTACK_ENVIRONMENT`    | Contentstack environment          | `production`     |
 | `CONTENTSTACK_REGION`         | Contentstack region               | `us`             |
-| `CONTENTSTACK_PREVIEW`        | Enable live preview mode         | `false`          |
+| `CONTENTSTACK_PREVIEW`        | Enable live preview mode          | `false`          |
 | `CONTENTSTACK_PREVIEW_TOKEN`  | Preview token for live preview    | (optional)       |
 
 ### Supported Regions
@@ -232,6 +314,7 @@ The API layer provides typed data fetching functions and live preview support. A
 The app includes Contentstack Live Preview support. When `CONTENTSTACK_PREVIEW=true`, content updates in the Contentstack UI automatically refresh the page without a full reload.
 
 The `useLivePreview` hook handles:
+
 - Initial content hydration from SSR
 - Client-side content fetching on route changes
 - Live preview content updates when editing in Contentstack
@@ -286,7 +369,11 @@ export { fetchProducts } from "./queries";
 import { fetchProducts, type ProductEntry } from "./api/contentstack";
 import { useLivePreview } from "./hooks";
 
-export function ProductsPage({ content: initialContent }: { content?: ProductEntry[] }) {
+export function ProductsPage({
+  content: initialContent,
+}: {
+  content?: ProductEntry[];
+}) {
   const products = useLivePreview(initialContent);
   // Or fetch client-side using useEffect + fetchProducts()
 }
