@@ -1,21 +1,20 @@
 /**
- * BlockComponent - Reusable content block component
+ * Block component - renders a content block with optional image
  *
- * Renders a content block with title, copy, and optional image.
- * Supports two layouts: image on left or image on right.
- *
- * If no image is provided, renders a simpler text-only layout.
+ * Uses <div> for HTML content to avoid invalid <p><p></p></p> nesting
+ * which causes hydration mismatches.
  */
 
-import type { Block as BlockType } from "../api/contentstack";
+import type { Block } from "../api/contentstack";
 
 interface BlockComponentProps {
-  /** Block content from Contentstack */
-  block: BlockType;
+  block: Block;
 }
 
 export function BlockComponent({ block }: BlockComponentProps) {
-  // If no image, render a simple text-only layout
+  const copyHtml = block.copy || "";
+
+  // Text-only layout (no image)
   if (!block.image?.url) {
     return (
       <article className="mb-8 p-6 bg-gray-50 rounded-lg">
@@ -24,27 +23,22 @@ export function BlockComponent({ block }: BlockComponentProps) {
             {block.title}
           </h2>
         )}
-        {block.copy && (
-          <p {...block.$?.copy} className="text-gray-600">
-            {block.copy}
-          </p>
+        {copyHtml && (
+          <div
+            {...block.$?.copy}
+            className="text-gray-600 prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: copyHtml }}
+          />
         )}
       </article>
     );
   }
 
-  // Determine layout: image on left or right
+  // Image + text layout
   const isImageLeft = block.layout === "image_left";
 
-  // Render image + text layout
-  // On mobile: stacked vertically
-  // On desktop: side-by-side (image left or right based on layout)
   return (
-    <article
-      className={`flex flex-col md:flex-row gap-6 mb-8 ${
-        isImageLeft ? "" : "md:flex-row-reverse"
-      }`}
-    >
+    <article className={`flex flex-col md:flex-row gap-6 mb-8 ${isImageLeft ? "" : "md:flex-row-reverse"}`}>
       <figure className="w-full md:w-1/2 m-0">
         <img
           {...block.$?.image}
@@ -59,11 +53,11 @@ export function BlockComponent({ block }: BlockComponentProps) {
             {block.title}
           </h2>
         )}
-        {block.copy && (
-          <p
+        {copyHtml && (
+          <div
             {...block.$?.copy}
-            className="text-gray-600 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: block.copy }}
+            className="text-gray-600 leading-relaxed prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: copyHtml }}
           />
         )}
       </div>

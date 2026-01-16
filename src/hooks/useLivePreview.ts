@@ -1,15 +1,12 @@
 /**
- * Custom hook to manage content fetching and live preview
- * 
- * This hook handles three scenarios:
- * 1. Initial render: Uses SSR content (no fetch needed)
- * 2. Route changes: Fetches new content when user navigates
- * 3. Live preview: Automatically updates when content changes in Contentstack UI
- * 
- * @param initialContent - Content from server-side rendering (optional)
- * @returns Current page content (updates automatically)
+ * Hook to manage page content with live preview support
+ *
+ * - Uses SSR content on initial render
+ * - Fetches new content on route changes
+ * - Auto-updates when content changes in Contentstack (preview mode)
  */
-import { useEffect, useState, useCallback, useRef } from "react";
+
+import { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import {
   fetchPageBySlug,
@@ -20,60 +17,36 @@ import {
 } from "../api/contentstack";
 
 export function useLivePreview(initialContent?: Page | null) {
-  // Get current URL path (e.g., "/about", "/products/1")
-  const location = useLocation();
+  const { pathname } = useLocation();
+  const [page, setPage] = useState<Page | null>(initialContent ?? null);
+  const initialPath = useRef(pathname);
+  const livePreviewReady = useRef(false);
 
-  // Store the current page content
-  // Start with SSR content if available, otherwise null
-  const [page, setPage] = useState<Page | null>(initialContent || null);
-
-  // Track if this is the first render
-  // We use a ref because we don't want re-renders when it changes
-  const isInitialMount = useRef(true);
-
-  /**
-   * Function to fetch content from Contentstack based on current URL
-   * 
-   * useCallback memoizes this function so it only recreates when location.pathname changes
-   * This prevents unnecessary re-renders and effect re-runs
-   */
-  const getContent = useCallback(async () => {
-    const slug = location.pathname || "/";
-    const data = await fetchPageBySlug(slug);
+  // Fetch content for the current page
+  const fetchContent = async () => {
+    const data = await fetchPageBySlug(pathname || "/");
     setPage(data);
-  }, [location.pathname]);
+  };
 
-  /**
-   * Set up Contentstack Live Preview (only in preview mode)
-   * 
-   * When CONTENTSTACK_PREVIEW=true:
-   * - Initializes the live preview SDK
-   * - Registers a callback that refetches content when changes occur in Contentstack UI
-   * - This allows editors to see changes in real-time without refreshing
-   */
+  // Initialize live preview (runs once after mount)
   useEffect(() => {
-    if (isPreviewMode) {
+    if (!isPreviewMode) return;
+
+    const timer = setTimeout(() => {
       initLivePreview();
-      // When content changes in Contentstack, call getContent to refresh
-      onEntryChange(getContent);
-    }
-  }, [getContent]);
+      setTimeout(() => (livePreviewReady.current = true), 100);
+      onEntryChange(() => livePreviewReady.current && fetchContent());
+    }, 200);
 
-  /**
-   * Fetch content when the route changes
-   * 
-   * Why skip initial mount? On first render, we already have content from SSR.
-   * We only need to fetch when the user navigates to a different page.
-   */
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Fetch content on route change (skip initial render - we have SSR content)
   useEffect(() => {
-    if (isInitialMount.current) {
-      // First render - skip fetching, we have SSR content
-      isInitialMount.current = false;
-      return;
-    }
-    // Route changed - fetch new content
-    getContent();
-  }, [location.pathname, getContent]);
+    if (pathname === initialPath.current) return;
+    initialPath.current = pathname;
+    fetchContent();
+  }, [pathname]);
 
   return page;
 }
